@@ -1,5 +1,8 @@
-russian-wildlife-dataset/
-CamVid/
+russian-wildlife-dataset
+datasets
+CamVid
+runs
 wandb
-__pycache__/
+__pycache__
 *.pth
+*.pt
