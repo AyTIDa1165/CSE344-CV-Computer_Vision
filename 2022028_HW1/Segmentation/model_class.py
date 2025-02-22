@@ -1,17 +1,8 @@
-import random
-import numpy as np
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-import torch.optim as optim
-from torch.utils.data import DataLoader
 from torchvision.transforms import v2
-from torchvision.transforms.functional import InterpolationMode
-from torchvision.models.segmentation import deeplabv3_resnet50
-from dataset_class import CamVidDataset
-import wandb
-import warnings
-warnings.filterwarnings("ignore", message="libpng warning: iCCP: known incorrect sRGB profile")
+from torchvision.models.segmentation import deeplabv3_resnet50, DeepLabV3_ResNet50_Weights
 
 class SegNet_Encoder(nn.Module):
     def __init__(self, in_chn=3, out_chn=32, BN_momentum=0.5):
@@ -227,142 +218,9 @@ class DeepLabV3(nn.Module):
     def __init__(self, num_classes=32):
         super(DeepLabV3, self).__init__()
         # TODO: Initialize DeepLabV3 model here using pretrained=True
-        self.model = deeplabv3_resnet50(pretrained=True)
+        self.model = deeplabv3_resnet50(weights=DeepLabV3_ResNet50_Weights.DEFAULT)
         #  should be a Conv2D layer with input channels as 256 and output channel as num_classes using a stride of 1, and kernel size of 1.
         self.model.classifier[4] = nn.Conv2d(in_channels=256, out_channels=num_classes, kernel_size=1, stride=1)
        
     def forward(self, x):
         return self.model(x)['out']
-
-def train(train_dataloader, device, model, criterion, optimizer, config):
-    for epoch in range(config.epochs):
-        model.train()
-        train_loss = 0.0
-        num_train_samples = 0
-        for images, labels in train_dataloader:
-            images, labels = images.to(device), labels.to(device)
-            # print(images.size())
-            outputs = model(images)
-            loss = criterion(outputs, labels)
-            optimizer.zero_grad()
-            loss.backward()
-            optimizer.step()
-
-            curr_batch_size = images.size(0)
-            train_loss += loss.item() * curr_batch_size
-            num_train_samples += curr_batch_size
-
-        average_train_loss = train_loss/num_train_samples
-        
-        wandb.log({"epoch": epoch + 1, "train_loss": average_train_loss})
-        print(f"EPOCH: {epoch+1} | TRAIN LOSS: {average_train_loss}")
-
-        torch.save(model.state_dict(), f"decoder.pth")
-    print(f"weights saved at decoder.pth")
-
-def test(test_dataloader, device, decoder_dir, num_classes):
-    eval_dict = [{'TP': 0, 'TN': 0, 'FP': 0, 'FN': 0} for _ in range(num_classes)]
-
-    if decoder_dir == 'decoder.pth':
-        model = SegNet_Pretrained('encoder_model.pth', in_chn=3, out_chn=32).to(device)
-    else:
-        model = DeepLabV3().to(device)
-    model.load_state_dict(torch.load(decoder_dir))
-    model.eval()
-
-    correct_pixels = 0
-    total_pixels = 0
-
-    with torch.no_grad():
-        for images, labels in test_dataloader:
-            images, labels = images.to(device), labels.to(device)
-            outputs = model(images)
-            pred = torch.argmax(outputs, dim=1)
-            for c in range(num_classes):
-                eval_dict[c]['TP'] += ((pred == c) & (labels == c)).sum().item()
-                eval_dict[c]['FP'] += ((pred == c) & (labels != c)).sum().item()
-                eval_dict[c]['TN'] += ((pred != c) & (labels != c)).sum().item()
-                eval_dict[c]['FN'] += ((pred != c) & (labels == c)).sum().item()
-
-            correct_pixels += (pred == labels).sum().item()
-            total_pixels += pred.numel()
-    
-    acc = correct_pixels / total_pixels
-
-    class_wise_acc = []
-    class_wise_IoU = []
-    class_wise_dice_coef = []
-    ep = 1e-9
-    for metric in eval_dict:
-        # print(metric['TP'], metric['TN'], metric['FP'], metric['FN'])
-        class_acc = (metric['TP'] + metric['TN']) / (metric['TP'] + metric['TN'] + metric['FP'] + metric['FN'] + ep)
-        class_dice_coef = 2*metric['TP']/ (2*metric['TP'] + metric['FP'] + metric['FN'] + ep)
-        class_IoU = metric['TP']/ (metric['TP'] + metric['FP'] + metric['FN'] + ep)
-
-        class_wise_acc.append(class_acc)
-        class_wise_dice_coef.append(class_dice_coef)
-        class_wise_IoU.append(class_IoU)
-
-    return acc, class_wise_acc, class_wise_IoU, class_wise_dice_coef
-
-def model_pipeline(decoder_dir, config):
-    project_name = 'SegNet' if decoder_dir == 'decoder.pth' else 'DeepLabV3'
-    with wandb.init(project=project_name, config=config):
-        config = wandb.config
-
-        random.seed(config.seed)
-        np.random.seed(config.seed)
-        torch.manual_seed(config.seed)
-        if torch.cuda.is_available():
-            torch.cuda.manual_seed_all(config.seed)
-
-        transform = v2.Compose([
-            v2.ConvertImageDtype(torch.float32),
-            v2.Resize((360, 480)), 
-            v2.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
-        ])
-
-        target_transform = v2.Resize((360, 480), interpolation=InterpolationMode.NEAREST)
-
-        train_dataset = CamVidDataset(img_dir='CamVid/train_images', label_dir='CamVid/train_labels', class_dict_dir='CamVid/class_dict.csv', transform=transform, target_transform=target_transform)
-        test_dataset = CamVidDataset(img_dir='CamVid/test_images', label_dir='CamVid/test_labels', class_dict_dir='CamVid/class_dict.csv', transform=transform, target_transform=target_transform)
-        train_dataloader = DataLoader(dataset=train_dataset, batch_size=config.batch_size, shuffle=True)
-        test_dataloader = DataLoader(dataset=test_dataset, batch_size=config.batch_size, shuffle=True)
-        
-        device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-        if decoder_dir == 'decoder.pth':
-            model = SegNet_Pretrained('encoder_model.pth', in_chn=3, out_chn=32).to(device)
-        else:
-            model = DeepLabV3().to(device)
-
-        # criterion = nn.CrossEntropyLoss()
-        # optimizer = optim.Adam(model.parameters(), lr=config.learning_rate)
-        # train(train_dataloader, device, model, criterion, optimizer, config) 
-
-        acc, class_wise_acc, class_wise_IoU, class_wise_dice_coef = test(test_dataloader, device, decoder_dir, config.num_classes)
-        print(f"miou: {sum(class_wise_IoU) / len(class_wise_IoU)}")
-        for class_num in range(config.num_classes):
-            print(f"class: {class_num} | pixel wise accuracy: {class_wise_acc[class_num]}")
-        print("----------------------------------------------")
-        for class_num in range(config.num_classes):
-            print(f"class: {class_num} | IoU: {class_wise_IoU[class_num]}")
-        print("----------------------------------------------")
-        for class_num in range(config.num_classes):
-            print(f"class: {class_num} | Dice Coefficient: {class_wise_dice_coef[class_num]}")
-        print("----------------------------------------------")
-        print(f"Overall Accuracy: {acc}")
-
-config = dict(
-    epochs=50,
-    num_classes=32,
-    learning_rate=0.001,
-    batch_size=3,
-    dataset="CamVid",
-    architecture="SegNet",
-    seed=2022028
-)
-
-wandb.login()
-
-# model_pipeline('decoder.pth', config)
-model_pipeline('deeplabv3.pth', config)

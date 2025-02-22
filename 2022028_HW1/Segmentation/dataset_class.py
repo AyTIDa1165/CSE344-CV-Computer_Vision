@@ -4,7 +4,6 @@ import pandas as pd
 from torchvision.io import read_image
 from torch.utils.data import Dataset
 from torchvision.transforms import v2
-from torchvision.transforms.functional import InterpolationMode
 
 class CamVidDataset(Dataset):
     def __init__(self, img_dir, label_dir, class_dict_dir, transform=None, target_transform=None):
@@ -62,22 +61,3 @@ class CamVidDataset(Dataset):
 
         label = self.label_encode(label)
         return image, label
-
-# transform = v2.Compose([
-#     v2.ConvertImageDtype(torch.float32),
-#     v2.Resize((360, 480)), 
-#     v2.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
-# ])
-
-# target_transform = v2.Resize((360, 480), interpolation=InterpolationMode.NEAREST)
-
-# train_dataset = CamVidDataset(img_dir='CamVid/train_images', label_dir='CamVid/train_labels', class_dict_dir='CamVid/class_dict.csv', transform=transform, target_transform=target_transform)
-# test_dataset = CamVidDataset(img_dir='CamVid/test_images', label_dir='CamVid/test_labels', class_dict_dir='CamVid/class_dict.csv', transform=transform, target_transform=target_transform)
-
-# result = torch.zeros(32)
-# for i in range(train_dataset.__len__()):
-#     _, tensor = train_dataset.__getitem__(i)
-#     flattened = tensor.flatten()
-#     counts = torch.bincount(flattened, minlength=32)
-#     result = result + counts
-# print(result.to(torch.int64))
