@@ -1,0 +1,11 @@
+image,caption,clip_score,clips_score
+ILSVRC2012_test_00000003.jpg,a dog walking across the show floor,0.3076,0.1885
+ILSVRC2012_test_00000004.jpg,a dog in the grass,0.2849,0.1498
+ILSVRC2012_test_00000018.jpg,three little kids relaxing in a pool,0.3035,0.1514
+ILSVRC2012_test_00000019.jpg,a bird that is perched on a plant,0.2832,0.1575
+ILSVRC2012_test_00000022.jpg,the dog,0.24,0.1109
+ILSVRC2012_test_00000023.jpg,a man that is riding his bike,0.2747,0.149
+ILSVRC2012_test_00000025.jpg,a butterfly on green leaves,0.2703,0.1666
+ILSVRC2012_test_00000026.jpg,a man in a suit and tie on a brown couch,0.292,0.1386
+ILSVRC2012_test_00000030.jpg,two different ducks walking on the water,0.2869,0.1225
+ILSVRC2012_test_00000034.jpg,a coffee machine making two cups,0.291,0.148

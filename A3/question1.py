@@ -39,7 +39,7 @@ def rank_with_clip(image_path, descriptions):
     return [(descriptions[idx], similarity_scores[idx].item()) for idx in sorted_indices]
 
 
-def rank_with_open_clip(image_path, descriptions):
+def rank_with_clips(image_path, descriptions):
     model, preprocess = create_model_from_pretrained('hf-hub:UCSC-VLAA/ViT-L-14-CLIPS-224-Recap-DataComp-1B')
     tokenizer = get_tokenizer('hf-hub:UCSC-VLAA/ViT-L-14-CLIPS-224-Recap-DataComp-1B')
     model = model.to(device)
@@ -62,14 +62,14 @@ def rank_with_open_clip(image_path, descriptions):
 
 
 def main():
-    image_path = "sample_image.jpg"
+    image_path = "assets/sample_image.jpg"
 
     print("\n===== CLIP (OpenAI) Ranking =====")
     for rank, (desc, score) in enumerate(rank_with_clip(image_path, descriptions), start=1):
         print(f"{rank:2d}. Score: {score:.4f} | {desc}")
 
     print("\n===== CLIPS Ranking =====")
-    for rank, (desc, score) in enumerate(rank_with_open_clip(image_path, descriptions), start=1):
+    for rank, (desc, score) in enumerate(rank_with_clips(image_path, descriptions), start=1):
         print(f"{rank:2d}. Score: {score:.4f} | {desc}")
 
 
