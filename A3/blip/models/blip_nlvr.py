@@ -1,7 +1,7 @@
-from models.med import BertConfig
-from models.nlvr_encoder import BertModel
-from models.vit import interpolate_pos_embed
-from models.blip import create_vit, init_tokenizer, is_url
+from blip.models.med import BertConfig
+from blip.models.nlvr_encoder import BertModel
+from blip.models.vit import interpolate_pos_embed
+from blip.models.blip import create_vit, init_tokenizer, is_url
 
 from timm.models.hub import download_cached_file
 
@@ -13,7 +13,7 @@ import numpy as np
 
 class BLIP_NLVR(nn.Module):
     def __init__(self,                 
-                 med_config = 'configs/med_config.json',  
+                 med_config = 'blip/configs/med_config.json',  
                  image_size = 480,
                  vit = 'base',
                  vit_grad_ckpt = False,

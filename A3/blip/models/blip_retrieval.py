@@ -1,15 +1,15 @@
-from models.med import BertConfig, BertModel
+from blip.models.med import BertConfig, BertModel
 from transformers import BertTokenizer
 
 import torch
 from torch import nn
 import torch.nn.functional as F
 
-from models.blip import create_vit, init_tokenizer, load_checkpoint
+from blip.models.blip import create_vit, init_tokenizer, load_checkpoint
 
 class BLIP_Retrieval(nn.Module):
     def __init__(self,                 
-                 med_config = 'configs/med_config.json',  
+                 med_config = 'blip/configs/med_config.json',  
                  image_size = 384,
                  vit = 'base',
                  vit_grad_ckpt = False,

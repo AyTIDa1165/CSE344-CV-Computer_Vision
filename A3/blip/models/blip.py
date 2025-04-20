@@ -8,8 +8,8 @@
 import warnings
 warnings.filterwarnings("ignore")
 
-from models.vit import VisionTransformer, interpolate_pos_embed
-from models.med import BertConfig, BertModel, BertLMHeadModel
+from blip.models.vit import VisionTransformer, interpolate_pos_embed
+from blip.models.med import BertConfig, BertModel, BertLMHeadModel
 from transformers import BertTokenizer
 
 import torch
@@ -22,7 +22,7 @@ from timm.models.hub import download_cached_file
 
 class BLIP_Base(nn.Module):
     def __init__(self,                 
-                 med_config = 'configs/med_config.json',  
+                 med_config = 'blip/configs/med_config.json',  
                  image_size = 224,
                  vit = 'base',
                  vit_grad_ckpt = False,
@@ -77,7 +77,7 @@ class BLIP_Base(nn.Module):
         
 class BLIP_Decoder(nn.Module):
     def __init__(self,                 
-                 med_config = 'configs/med_config.json',  
+                 med_config = 'blip/configs/med_config.json',  
                  image_size = 384,
                  vit = 'base',
                  vit_grad_ckpt = False,
