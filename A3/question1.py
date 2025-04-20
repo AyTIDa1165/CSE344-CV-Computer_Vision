@@ -1,3 +1,4 @@
+import pandas as pd
 import torch
 import torch.nn.functional as F
 import numpy as np
@@ -60,17 +61,26 @@ def rank_with_clips(image_path, descriptions):
 
     return [(descriptions[idx], similarity_scores[idx]) for idx in sorted_indices]
 
-
 def main():
     image_path = "assets/sample_image.jpg"
 
-    print("\n===== CLIP (OpenAI) Ranking =====")
+    print("\n===== CLIP Ranking =====")
+    clip_results = []
     for rank, (desc, score) in enumerate(rank_with_clip(image_path, descriptions), start=1):
         print(f"{rank:2d}. Score: {score:.4f} | {desc}")
+        clip_results.append({'rank': rank, 'description': desc, 'similarity_score': score})
+
+    clip_df = pd.DataFrame(clip_results)
+    clip_df.to_csv("clip_ranking.csv", index=False)
 
     print("\n===== CLIPS Ranking =====")
+    clips_results = []
     for rank, (desc, score) in enumerate(rank_with_clips(image_path, descriptions), start=1):
         print(f"{rank:2d}. Score: {score:.4f} | {desc}")
+        clips_results.append({'rank': rank, 'description': desc, 'similarity_score': score})
+
+    clips_df = pd.DataFrame(clips_results)
+    clips_df.to_csv("clips_ranking.csv", index=False)
 
 
 if __name__ == "__main__":

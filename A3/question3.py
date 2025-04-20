@@ -1,9 +1,6 @@
 import os
 import torch
 import csv
-from PIL import Image
-from torchvision import transforms
-from torchvision.transforms.functional import InterpolationMode
 from blip.models.blip import blip_decoder
 from question1 import rank_with_clip, rank_with_clips
 from question2 import load_image
