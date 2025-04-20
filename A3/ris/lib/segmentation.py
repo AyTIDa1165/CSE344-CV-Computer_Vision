@@ -30,7 +30,6 @@ def _segm_lavt(pretrained, args):
         assert False
     # args.window12 added for test.py because state_dict is loaded after model initialization
     if 'window12' in pretrained or args.window12:
-        print('Window size 12!')
         window_size = 12
     else:
         window_size = 7
@@ -50,10 +49,8 @@ def _segm_lavt(pretrained, args):
                                          fusion_drop=args.fusion_drop
                                          )
     if pretrained:
-        print('Initializing Multi-modal Swin Transformer weights from ' + pretrained)
         backbone.init_weights(pretrained=pretrained)
     else:
-        print('Randomly initialize Multi-modal Swin Transformer weights.')
         backbone.init_weights()
 
     model_map = [SimpleDecoding, LAVT]
@@ -119,10 +116,8 @@ def _segm_lavt_one(pretrained, args):
                                          fusion_drop=args.fusion_drop
                                          )
     if pretrained:
-        print('Initializing Multi-modal Swin Transformer weights from ' + pretrained)
         backbone.init_weights(pretrained=pretrained)
     else:
-        print('Randomly initialize Multi-modal Swin Transformer weights.')
         backbone.init_weights()
 
     model_map = [SimpleDecoding, LAVTOne]

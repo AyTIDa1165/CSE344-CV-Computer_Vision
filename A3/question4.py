@@ -2,6 +2,7 @@ import torchvision.transforms as T
 import numpy as np
 import os
 import torch
+import cv2
 import torch.nn.functional as F
 from PIL import Image
 from ris.bert.tokenization_bert import BertTokenizer
@@ -32,7 +33,7 @@ def load_reference(reference_path):
                 image_descriptions.append((img.strip(), desc.strip().strip('"')))
     return image_descriptions
 
-def segment_image_with_text(image_path, sentence):
+def segment_image_with_text(image_path, sentence, visualize_features=False):
     weights = './ris/checkpoints/refcoco.pth'
     device = "cuda" if torch.cuda.is_available() else "cpu"
 
@@ -76,17 +77,26 @@ def segment_image_with_text(image_path, sentence):
     model.eval()
     bert_model.eval()
 
-    # Inference
     with torch.no_grad():
         last_hidden_states = bert_model(padded_sent_toks, attention_mask=attention_mask)[0]
         embedding = last_hidden_states.permute(0, 2, 1)
-        output = model(img_tensor, embedding, l_mask=attention_mask.unsqueeze(-1))
-        output = output.argmax(1, keepdim=True)
-        output = F.interpolate(output.float(), (original_h, original_w)).squeeze().cpu().numpy().astype(np.uint8)
+        output, x_c4 = model(img_tensor, embedding, l_mask=attention_mask.unsqueeze(-1))
+        
+        # Segmentation mask
+        seg_mask = output.argmax(1, keepdim=True)
+        seg_mask = F.interpolate(seg_mask.float(), (original_h, original_w)).squeeze().cpu().numpy().astype(np.uint8)
+        
+        # Feature visualization
+        if visualize_features:
+            feat = x_c4.mean(1).squeeze().cpu().numpy()
+            feat = cv2.resize(feat, (original_w, original_h))
+            feat = (255 * (feat - feat.min()) / (np.ptp(feat) + 1e-5)).astype(np.uint8)
+            feat_color = cv2.applyColorMap(feat, cv2.COLORMAP_JET)
+            return Image.fromarray(overlay_davis(img_ndarray, seg_mask)), Image.fromarray(feat_color)
 
-    # Overlay mask and return visualization
-    vis = overlay_davis(img_ndarray, output)
+    vis = overlay_davis(img_ndarray, seg_mask)
     return Image.fromarray(vis)
+
 
 def main():
     image_dir = 'assets/samples'
@@ -96,9 +106,14 @@ def main():
 
     for img, ref in reference:
         image_path = os.path.join(image_dir, img)
-        segmented_image_path = os.path.join(segmented_image_dir, f'{img.split('.')[0]}_seg.jpg')
-        segmented_image = segment_image_with_text(image_path, ref)
-        segmented_image.save(segmented_image_path)
+        name = img.split('.')[0]
+        segmented_image_path = os.path.join(segmented_image_dir, f'segmentation/{name}_seg.jpg')
+        feature_map_path = os.path.join(segmented_image_dir, f'feature_map/{name}_feat.jpg')
+
+        seg_img, feat_img = segment_image_with_text(image_path, ref, visualize_features=True)
+        seg_img.save(segmented_image_path)
+        feat_img.save(feature_map_path)
+
     
 if __name__ == "__main__":
     main()
